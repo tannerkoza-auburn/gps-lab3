@@ -17,6 +17,7 @@ Once cloned, open the project as the current folder in MATLAB and run the follow
 ```sh
 startup
 ```
+If other receiver data is needed, add the unparsed receiver .mat files to 'data/receiver_data'. Then, run 'lab_parser' in the Command Window from the root folder. The parsed files will be save in 'data/parsed_data' to be used in other scripts.
 
 This adds all subfolders in the project to the MATLAB path. This same functionality is also automatically achieved when MATLAB starts in this project folder.  
 ## Contributing
