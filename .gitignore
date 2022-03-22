@@ -1,2 +1,5 @@
 # Ignore All .asv's
 *.asv
+
+# Ignore All .mats's
+*.mat
