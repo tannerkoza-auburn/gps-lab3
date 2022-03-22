@@ -9,10 +9,17 @@ clc
 indata = dir(fullfile('data/receiver_data','*.mat'));
 outdir = 'data/parsed_data';
 
+% Define Number of Files
+numFiles = length(indata);
+
+if numFiles == 0
+    error('No files have been read. Run this file from the root directory.')
+end
+
 % Define Constants
 C = physconst('LightSpeed');
 
-for i = 1:length(indata)
+for i = 1:numFiles
     thisfile = indata(i).name;
     outfile = strrep(thisfile,'_data','');
     outstruct = strrep(outfile,'.mat','');
@@ -49,6 +56,6 @@ for i = 1:length(indata)
     newstruct.(outstruct) = outdata;
     save(destfile, '-struct', 'newstruct')
 
-    clearvars outdata
+    clearvars outdata newstruct
 
 end
