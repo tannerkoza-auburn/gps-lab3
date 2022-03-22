@@ -40,7 +40,7 @@ for i = 1:numFiles
     for j = 1:length(tstruct.(sstruct).gpsTime(:,1))
         
         for f = 1:numFreq
-            
+
             % Find SVs in View
             [~, satsInView] = find(~isnan(tstruct.(sstruct).obs.(freq{f}).psr(j,:)));
     
@@ -53,11 +53,15 @@ for i = 1:numFiles
             transitTime = outdata{j}.(freq{f}).psr/C;
             transmitTime = tstruct.(sstruct).gpsTime(j) - transitTime;
 
+            for k = 1:length(transmitTime)
+                [outdata{j}.(freq{f}).svPos(k,:), outdata{j}.(freq{f}).svVel(k,:), outdata{j}.(freq{f}).clkCorr(k,1)] = calc_sv_pos(tstruct.(sstruct).ephem(satsInView(k),:), transmitTime(k), transitTime(k));
+            end 
+
         end
     
-        for k = 1:length(transmitTime)
-            [outdata{j}.svPos(k,:), outdata{j}.svVel(k,:), outdata{j}.clkCorr(k,1)] = calc_sv_pos(tstruct.(sstruct).ephem(satsInView(k),:), transmitTime(k), transitTime(k));
-        end 
+
+
+        clearvars satsInView
 
     end
 
