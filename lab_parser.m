@@ -45,7 +45,7 @@ for i = 1:numFiles
             [~, satsInView] = find(~isnan(tstruct.(sstruct).obs.(freq{f}).psr(j,:)));
     
             % Extract SVs in View, PSR, Dopp, and Time
-            outdata{j}.(freq{f}).SVs = satsInView;
+            outdata{j}.(freq{f}).SVs = satsInView;       
             outdata{j}.(freq{f}).gpsTime = tstruct.(sstruct).gpsTime(j,1);
             outdata{j}.(freq{f}).psr(:,1) = tstruct.(sstruct).obs.(freq{f}).psr(j,satsInView);
             outdata{j}.(freq{f}).dopp(:,1) = tstruct.(sstruct).obs.(freq{f}).dopp(j,satsInView);
