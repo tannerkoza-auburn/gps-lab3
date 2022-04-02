@@ -143,14 +143,16 @@ xlabel('Time (s)')
 M = length(idx);
 C = physconst('LightSpeed');
 L1 = 1575.42 * 10^6; % freq of L1
-lambda = C/L1;
+L2 = 1227.6 * 10^6; % freq of L2
+lambdaL1 = C/L1;
+lambdaL2 = C/L2;
 for i = 1:length(idx)
     
     % Novatel carrier in cycles.... trimble carrier in meters
     userPsr = RCVR0{idx(i,1),1}.L1.psr;
     userSats = RCVR0{idx(i,1),1}.L1.SVs;
     svPos = RCVR0{idx(i,1),1}.L1.svPos;
-    userPhi = lambda*RCVR0{idx(i,1),1}.L1.carr; % convert carrier to m
+    userPhi = lambdaL1*RCVR0{idx(i,1),1}.L1.carr; % convert carrier to m
     
     basePsr = RCVRT{idx(i,2),1}.L1.psr;
     basePos = trim.pos(:,idx(i,2));
@@ -199,7 +201,6 @@ figure()
 geoplot(smooth_lla(:,1), smooth_lla(:,2), '*')
 geobasemap satellite
 title('Smoothed DGPS Novatel Solution')
-legend('Novatel','Trimble')
 
 errC = r_ab;
 errNormC = vecnorm(errC);
@@ -214,3 +215,66 @@ plot(time, errNormC, 'linewidth', 2)
 title('Smoothed-Code Single-Difference Base Length Error')
 ylabel('Error (m)')
 xlabel('Time (s)')
+
+
+
+
+%% --- part D RTK
+
+%--- solve for the integer ambiguities
+
+
+% unpack psr, carrL1 and carrL2 for each sat... only performing once
+
+for i = 1:length(idx)
+    % Novatel carrier in cycles.... trimble carrier in meters
+    userPsr = RCVR0{idx(i,1),1}.L1.psr;
+    userCarrL1 = lambdaL1*RCVR0{idx(i,1),1}.L1.carr;
+    userSatsL1 = RCVR0{idx(i,1),1}.L1.SVs;
+    userCarrL2 = lambdaL2*RCVR0{idx(i,1),1}.L2.carr;
+    userSatsL2 = RCVR0{idx(i,1),1}.L2.SVs;
+    svPos = RCVR0{idx(i,1),1}.L1.svPos;
+    userPhi = lambdaL1*RCVR0{idx(i,1),1}.L1.carr; % convert carrier to m
+    
+    basePos = trim.pos(:,idx(i,2)); % position used for DGPS base station
+    basePsr = RCVRT{idx(i,2),1}.L1.psr;
+    baseCarrL1 = RCVRT{idx(i,2),1}.L1.carr;
+    baseSatsL1 = RCVRT{idx(i,2),1}.L1.SVs;
+    baseCarrL2 = RCVRT{idx(i,2),1}.L2.carr;
+    baseSatsL2 = RCVRT{idx(i,2),1}.L2.SVs;
+    
+    % find matching satellites for btwn base and user for L1 and L2
+    [C, ~, ~] = intersect(userSatsL1, userSatsL2); % user L1 and L2
+    [C, ~, ~] = intersect(baseSatsL1, C);  % base L1 and resulting
+    % find matching over all
+    [matchingSats, ~, ~] = intersect(baseSatsL2, C); % resulting and base L2
+    
+    % now extract all matching satellite indices
+    [~, iUserL1, ~] = intersect(userSatsL1, matchingSats);
+    [~, iUserL2, ~] = intersect(userSatsL2, matchingSats);
+    [~, iBaseL1, ~] = intersect(baseSatsL1, matchingSats);
+    [~, iBaseL2, ~] = intersect(baseSatsL2, matchingSats);
+    
+    
+    % --- trim to only use matching pseudoranges, carr, satPos
+    userPsr = userPsr(iUserL1);
+    userCarrL1 = userCarrL1(iUserL1);
+    userCarrL2 = userCarrL2(iUserL2);
+    svPos = svPos(iUserL1,:);
+    basePsr = basePsr(iBaseL1);
+    baseCarrL1 = baseCarrL1(iBaseL1);
+    baseCarrL2 = baseCarrL2(iBaseL2);
+    
+    % push through single-difference carrier based solution (solves for integer ambiguities
+    out = novClass.sdCarr3D(userPsr, userCarrL1, userCarrL2, basePsr, baseCarrL1, baseCarrL2, svPos, basePos);
+    
+    err_d(i) = norm(out.rpv);
+end
+
+figure()
+plot(err_d, 'lineWidth', 2);
+title('L1 Carrier-Based Base Length Error')
+ylabel('Error (m)')
+xlabel('Time (s)')
+
+
