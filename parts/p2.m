@@ -234,7 +234,7 @@ for i = 1:length(idx)
     userCarrL2 = lambdaL2*RCVR0{idx(i,1),1}.L2.carr;
     userSatsL2 = RCVR0{idx(i,1),1}.L2.SVs;
     svPos = RCVR0{idx(i,1),1}.L1.svPos;
-    userPhi = lambdaL1*RCVR0{idx(i,1),1}.L1.carr; % convert carrier to m
+     %userPhi = lambdaL1*RCVR0{idx(i,1),1}.L1.carr; % convert carrier to m
     
     basePos = trim.pos(:,idx(i,2)); % position used for DGPS base station
     basePsr = RCVRT{idx(i,2),1}.L1.psr;
@@ -270,6 +270,8 @@ for i = 1:length(idx)
     
     err_d(i) = norm(out.rpv);
 end
+mean(err_d)
+std(err_d)
 
 figure()
 plot(err_d, 'lineWidth', 2);
