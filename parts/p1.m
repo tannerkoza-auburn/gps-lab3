@@ -16,7 +16,7 @@ ecefTrue = [423203.359 -5361678.541 3417280.681];
 llaTrue = ecef2lla(ecefTrue);
 
 figure
-geoplot(llaTrue(:,1),llaTrue(:,2),'.')
+geoplot(llaTrue(:,1),llaTrue(:,2),'*')
 
 % Instantiate Receiver
 rcvr = gnssReceiver();
@@ -55,12 +55,12 @@ for i = 1:RCVRTSteps
 end
 
 hold on
-geoplot(llaT(:,1),llaT(:,2),'.')
+geoplot(llaT(:,1),llaT(:,2),'*')
 
 %% Part B
 
 % Window Size
-M = 1000; % 7 min.
+M = 4200; % 7 min.
 
 % IF Preallocation
 IF = cell(RCVRTSteps,1);
@@ -105,7 +105,7 @@ for i = 1:RCVRTSteps-1
 end
 
 hold on
-geoplot(llaS(:,1),llaS(:,2),'.')
+geoplot(llaS(:,1),llaS(:,2),'*')
 
 %% Part C
 
@@ -156,7 +156,7 @@ for i = 1:RCVRTSteps
 end
 
 hold on
-geoplot(llaIEM(:,1),llaIEM(:,2),'.')
+geoplot(llaIEM(:,1),llaIEM(:,2),'*')
 
 %% Part D
 % NOTE: The IF pseudorange becomes incredibly noisy, therefore, the
@@ -193,7 +193,7 @@ for i = 1:RCVRTSteps
 end
 
 hold on
-geoplot(llaDF(:,1),llaDF(:,2),'.')
+geoplot(llaDF(:,1),llaDF(:,2),'*')
 legend('Truth','Original','Carrier Smoothed','IEM IF','Dual Frequency IF','Location','northwest')
 title('IF & Smoothed Pseudorange Solution Comparison')
 
