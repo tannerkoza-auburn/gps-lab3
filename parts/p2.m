@@ -3,6 +3,9 @@ clear; clc; close all
 load('RCVR0.mat');
 load('RCVRT.mat');
 
+% truth given from surveyed position of trimble antenna
+basePosTruth = [423203.359; -5361678.541; 3417280.681];
+
 
 
 %% ---- part a
@@ -92,8 +95,8 @@ plot(time,errNormA, 'linewidth', 2);
 title('Trimble and Novatel Base Length Error')
 ylabel('Error (m)')
 xlabel('Time (s)')
-mean(errNormA)
-std(errNormA)
+meanA = mean(errNormA)
+stdA = std(errNormA)
 
 
 
@@ -126,8 +129,8 @@ errNormB = vecnorm(errB);
 time = nov.gpsTime(idx(:,1));
 time = time - time(1);
 
-mean(errNormB)
-std(errNormB)
+meanB = mean(errNormB)
+stdB = std(errNormB)
 
 figure()
 plot(time, errNormB, 'linewidth', 2)
@@ -207,8 +210,8 @@ errNormC = vecnorm(errC);
 time = nov.gpsTime(idx(:,1));
 time = time - time(1);
 
-mean(errNormC)
-std(errNormC)
+meanC = mean(errNormC)
+stdC = std(errNormC)
 
 figure()
 plot(time, errNormC, 'linewidth', 2)
@@ -225,6 +228,10 @@ xlabel('Time (s)')
 
 
 % unpack psr, carrL1 and carrL2 for each sat... only performing once
+
+SVintsL1 = NaN(32,length(idx));
+SVintsL2 = NaN(32,length(idx));
+delPsr_CarrL1 = NaN(32, length(idx));
 
 for i = 1:length(idx)
     % Novatel carrier in cycles.... trimble carrier in meters
@@ -264,18 +271,121 @@ for i = 1:length(idx)
     basePsr = basePsr(iBaseL1);
     baseCarrL1 = baseCarrL1(iBaseL1);
     baseCarrL2 = baseCarrL2(iBaseL2);
+    basePos = basePosTruth; % use true base position?
     
-    % push through single-difference carrier based solution (solves for integer ambiguities
+    
+      
+    % push through single-difference carrier based solution (solves for integer ambiguities)
     out = novClass.sdCarr3D(userPsr, userCarrL1, userCarrL2, basePsr, baseCarrL1, baseCarrL2, svPos, basePos);
+    outDD = novClass.ddCarr3D(userPsr, userCarrL1, userCarrL2, basePsr, baseCarrL1, baseCarrL2, svPos, basePos);
     
-    err_d(i) = norm(out.rpv);
+    % save integer ambiguities with associated SV #
+    for j = 1:length(matchingSats)
+        intIdx = matchingSats(j); % which sat?
+        SVintsL1(intIdx,i) = out.N_lambda(2*j-1);
+        SVintsL2(intIdx,i) = out.N_lambda(2*j);
+        
+        % storing deltas for estimating integers w/ averaging window
+        delPsr_CarrL1(intIdx, i) = ((userPsr(j) - basePsr(j)) - (userCarrL1(j) - baseCarrL1(j)))/lambdaL1;
+    end     
+    err_d_sd(i) = norm(out.rpv); % single difference storage
+    err_d_dd(i) = norm(outDD.rpv); % double difference storage
+    
 end
-mean(err_d)
-std(err_d)
+meanD_sd = mean(err_d_sd)
+stdD_sd = std(err_d_sd)
+meanD_sd = mean(err_d_dd)
+stdD_sd = std(err_d_dd)
+
+
+
+%--- plot SV int over time
+figure()
+subplot(2,1,1)
+plot(time, SVintsL1');
+ylim([-200 200])
+title('L1 Single-Difference Integer Ambiguity Estimates')
+ylabel('Integer')
+xlabel('Time (s)')
+subplot(2,1,2)
+plot(time, SVintsL2');
+ylim([-200 200])
+title('L2 Single-Difference Integer Ambiguity Estimates')
+ylabel('Integer')
+xlabel('Time (s)')
 
 figure()
-plot(err_d, 'lineWidth', 2);
-title('L1 Carrier-Based Base Length Error')
+plot(time, err_d_sd, 'lineWidth', 2);
+title('L1 Carrier-Based Base Length Error (Widelane single diff)')
+ylabel('Error (m)')
+xlabel('Time (s)')
+
+figure()
+plot(time, err_d_dd, 'lineWidth', 2);
+title('L1 Carrier-Based Base Length Error (Widelane double diff)')
+ylabel('Error (m)')
+xlabel('Time (s)')
+
+% ------ perform solution again using averaged integers over whole sample window
+meanInts = mean(delPsr_CarrL1, 2, 'omitnan');
+for i = 1:length(idx)
+    % Novatel carrier in cycles.... trimble carrier in meters
+    userPsr = RCVR0{idx(i,1),1}.L1.psr;
+    userCarrL1 = lambdaL1*RCVR0{idx(i,1),1}.L1.carr;
+    userSatsL1 = RCVR0{idx(i,1),1}.L1.SVs;
+    userCarrL2 = lambdaL2*RCVR0{idx(i,1),1}.L2.carr;
+    userSatsL2 = RCVR0{idx(i,1),1}.L2.SVs;
+    svPos = RCVR0{idx(i,1),1}.L1.svPos;
+     %userPhi = lambdaL1*RCVR0{idx(i,1),1}.L1.carr; % convert carrier to m
+    
+    basePos = trim.pos(:,idx(i,2)); % position used for DGPS base station
+    basePsr = RCVRT{idx(i,2),1}.L1.psr;
+    baseCarrL1 = RCVRT{idx(i,2),1}.L1.carr;
+    baseSatsL1 = RCVRT{idx(i,2),1}.L1.SVs;
+    baseCarrL2 = RCVRT{idx(i,2),1}.L2.carr;
+    baseSatsL2 = RCVRT{idx(i,2),1}.L2.SVs;
+    
+    % find matching satellites for btwn base and user for L1 and L2
+    [C, ~, ~] = intersect(userSatsL1, userSatsL2); % user L1 and L2
+    [C, ~, ~] = intersect(baseSatsL1, C);  % base L1 and resulting
+    % find matching over all
+    [matchingSats, ~, ~] = intersect(baseSatsL2, C); % resulting and base L2
+    
+    % now extract all matching satellite indices
+    [~, iUserL1, ~] = intersect(userSatsL1, matchingSats);
+    [~, iUserL2, ~] = intersect(userSatsL2, matchingSats);
+    [~, iBaseL1, ~] = intersect(baseSatsL1, matchingSats);
+    [~, iBaseL2, ~] = intersect(baseSatsL2, matchingSats);
+    
+    
+    % --- trim to only use matching pseudoranges, carr, satPos
+    userPsr = userPsr(iUserL1);
+    userCarrL1 = userCarrL1(iUserL1);
+    userCarrL2 = userCarrL2(iUserL2);
+    svPos = svPos(iUserL1,:);
+    basePsr = basePsr(iBaseL1);
+    baseCarrL1 = baseCarrL1(iBaseL1);
+    baseCarrL2 = baseCarrL2(iBaseL2);
+    basePos = basePosTruth; % use true base position?
+    
+    
+      
+    % use solved-for integers in the single-difference algorithm:
+    userPsr = userCarrL1 - baseCarrL1;
+    basePsr = -lambdaL1*round(meanInts(matchingSats)); % corresponding integers to available sats
+    out = novClass.sdp3D(userPsr, basePsr, svPos, basePos);
+    
+   
+    err_d(i) = norm(out.rpv);
+    
+end
+meanD = mean(err_d)
+stdD = std(err_d)
+
+
+figure()
+plot(time, err_d, 'lineWidth', 2);
+title('L1 Carrier-Based Base Length Error (Averaging Window)')
 ylabel('Error (m)')
 xlabel('Time (s)')
 
