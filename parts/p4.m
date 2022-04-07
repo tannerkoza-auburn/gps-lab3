@@ -58,7 +58,7 @@ nov.poslla = ecef2lla(nov.pos');
 trim.poslla = ecef2lla(trim.pos');
 geoplot(nov.poslla(:,1), nov.poslla(:,2), '*')
 hold on
-geoplot(trim.poslla(:,1), trim.poslla(:,2), '*', 'MarkerSize', 15)
+geoplot(trim.poslla(1,1), trim.poslla(1,2), '*', 'MarkerSize', 15)
 geobasemap satellite
 title('Receiver Position Solutions')
 legend('Novatel','Trimble')
@@ -158,18 +158,18 @@ for i = 1:length(idx)
     
     
     % store position solutions
-    nov.posDGPS(:,i) = out.pos;
+    nov.posDGPS(:,i) = out.pos; % single diff carrier
+    nov.posDGPS_DD(:,i) = outDD.pos; % double-diff carrier
 end
 
-% --- plot solutions
+% --- plot solutions on top of standrd GPS
 nov.posllaDGPS = ecef2lla(nov.posDGPS');
-% trim.poslla = ecef2lla(trim.pos');
+nov.posllaDGPS_DD = ecef2lla(nov.posDGPS_DD');
 geoplot(nov.posllaDGPS(:,1), nov.posllaDGPS(:,2), '*')
-hold on
-% geoplot(trim.poslla(:,1), trim.poslla(:,2), '*', 'MarkerSize', 15)
+geoplot(nov.posllaDGPS_DD(:,1), nov.posllaDGPS_DD(:,2), '*')
 geobasemap satellite
 title('Receiver Position Solutions')
-legend('Novatel','Trimble')
+legend('GPS','Base Station', 'DGPS_{\Delta \Phi}', 'DGPS_{\Delta \nabla \Phi}')
 
 
 figure()
